@@ -95,11 +95,11 @@ namespace
   //   %8 = phi i32 [ %9, %6 ], [ %1, %2 ]
   //   %9 = add nsw i32 %8, -1
   //   %10 = getelementptr inbounds i8, ptr %7, i64 1
-  //   %11 = load i8, ptr %7, align 1, !tbaa !5
+  //   %11 = load i8, ptr %7, align 1
   //   %12 = xor i8 %11, -81
-  //   store i8 %12, ptr %7, align 1, !tbaa !5
+  //   store i8 %12, ptr %7, align 1
   //   %13 = icmp ugt i32 %8, 1
-  //   br i1 %13, label %6, label %14, !llvm.loop !8
+  //   br i1 %13, label %6, label %14
 
   // 14:                                               ; preds = %6, %2
   //   ret void
@@ -173,8 +173,7 @@ namespace
     phi_var08->addIncoming(var09, bb06);
 
     return DecodeFunc;
-  }
-  
+  }  
 #endif // END OBFS_MANUAL
 
 #ifdef OBFS_XOR_EXTERN
@@ -184,34 +183,10 @@ namespace
     llvm::SMDiagnostic Err;
     static llvm::LLVMContext Ctx; // this NEEDS to be static
     std::unique_ptr<Module> NuMod = llvm::parseIRFile("./decodeStub.ll", Err, Ctx); // temp module load up assembly
-    Function* SourceFunc = NuMod->getFunction("decode"); // function we want to copy
+    Function* DecodeFunc = NuMod->getFunction("decode"); // function we want to copy
     
-    FunctionCallee DecodeFuncCallee = M.getOrInsertFunction(
-				        SourceFunc->getName(),
-					SourceFunc->getFunctionType(),
-					SourceFunc->getAttributes());
-    
-    Function *DecodeFunc = cast<Function>(DecodeFuncCallee.getCallee());
-    DecodeFunc->setCallingConv(CallingConv::C);
-    
-    ValueToValueMapTy VMap;
-    Function::arg_iterator NewArgs = DecodeFunc->arg_begin();
-    for (Function::const_arg_iterator J = SourceFunc->arg_begin();
-	 J != SourceFunc->arg_end();
-	 ++J)
-    {
-      NewArgs->setName(J->getName());
-      VMap[&*J] = &*NewArgs++;
-    }
-
-    SmallVector<ReturnInst*, 8> Returns;  // Ignore returns cloned.
-    llvm::CloneFunctionInto(DecodeFunc, SourceFunc,
-			    VMap,
-			    llvm::CloneFunctionChangeType::DifferentModule,
-			    Returns);
     return DecodeFunc;
   }
-      
 #endif // OBFS_XOR_EXTERN
 
   char* 
