@@ -1,9 +1,9 @@
-; ModuleID = 'hello.bc'
+; ModuleID = 'decodeStub.bc'
 source_filename = "decodeStub.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-; Function Attrs: nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable
+; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
 define dso_local void @decode(ptr noundef %0, i32 noundef %1) local_unnamed_addr #0 {
   %3 = icmp ne ptr %0, null
   %4 = icmp sgt i32 %1, 0
@@ -14,7 +14,7 @@ define dso_local void @decode(ptr noundef %0, i32 noundef %1) local_unnamed_addr
   %7 = phi ptr [ %10, %6 ], [ %0, %2 ]
   %8 = phi i32 [ %9, %6 ], [ %1, %2 ]
   %9 = add nsw i32 %8, -1
-  %10 = getelementptr inbounds i8, ptr %7, i64 1
+  %10 = getelementptr inbounds nuw i8, ptr %7, i64 1
   %11 = load i8, ptr %7, align 1, !tbaa !5
   %12 = xor i8 %11, -81
   store i8 %12, ptr %7, align 1, !tbaa !5
@@ -25,7 +25,7 @@ define dso_local void @decode(ptr noundef %0, i32 noundef %1) local_unnamed_addr
   ret void
 }
 
-attributes #0 = { nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #0 = { nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 !llvm.ident = !{!4}
@@ -34,7 +34,7 @@ attributes #0 = { nofree norecurse nosync nounwind memory(readwrite, inaccessibl
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
-!4 = !{!"Debian clang version 18.1.8 (12)"}
+!4 = !{!"Debian clang version 20.1.8 (++20250708063603+0c9f909b7976-1~exp1~20250708183704.139)"}
 !5 = !{!6, !6, i64 0}
 !6 = !{!"omnipotent char", !7, i64 0}
 !7 = !{!"Simple C/C++ TBAA"}

@@ -10,10 +10,11 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <typeinfo>
 
+//#define OBFS_XOR_EXTERN
+
 #ifndef OBFS_XOR_EXTERN
 #define OBFS_XOR_MANUAL
 #endif
-//#define OBFS_XOR_EXTERN
 
 using namespace std;
 using namespace llvm;
@@ -110,6 +111,8 @@ namespace
   Function*
   createDecodeFunc(Module &M)
   {
+    outs() << "[INFO] Building decode function inline." << "\n";
+    
     auto &Ctx = M.getContext();
     FunctionCallee DecodeFuncCallee = M.getOrInsertFunction("decode", 
 							    Type::getVoidTy(Ctx), // RET
@@ -173,20 +176,51 @@ namespace
     phi_var08->addIncoming(var09, bb06);
 
     return DecodeFunc;
-  }  
+  }
+  
 #endif // END OBFS_MANUAL
 
+  
 #ifdef OBFS_XOR_EXTERN
+  
   llvm::Function*
   createDecodeFunc(llvm::Module &M)
   {
-    llvm::SMDiagnostic Err;
-    static llvm::LLVMContext Ctx; // this NEEDS to be static
-    std::unique_ptr<Module> NuMod = llvm::parseIRFile("./decodeStub.ll", Err, Ctx); // temp module load up assembly
-    Function* DecodeFunc = NuMod->getFunction("decode"); // function we want to copy
+    outs() << "[INFO] Loading decode function from external source." << "\n";
     
-    return DecodeFunc;
+    llvm::LLVMContext* Ctx = &M.getContext();
+    llvm::SMDiagnostic Err;
+
+    // parse the bytecode into a temp module, and get the function ref to clone
+    std::unique_ptr<llvm::Module> NuMod = llvm::parseIRFile("./decodeStub.bc", Err, *Ctx);
+    llvm::Function* NuDecodeFunc = NuMod->getFunction("decode");
+
+    // create the hollow function in the main module
+    llvm::Function* DecodeFunc = llvm::Function::Create( NuDecodeFunc->getFunctionType(),
+							   NuDecodeFunc->getLinkage(),
+							   NuDecodeFunc->getName(),
+							   M );
+
+    llvm::ValueToValueMapTy VMap;
+
+    Function::arg_iterator DestI = DecodeFunc->arg_begin();
+    for( const Argument & I : NuDecodeFunc->args())
+      if( VMap.count(&I) == 0) // get arguments?
+      {
+	DestI->setName(I.getName()); // copy the name over
+	VMap[&I] = &*DestI++;        // add mapping to VMap
+      }
+    
+    llvm::SmallVector<llvm::ReturnInst *, 8> Returns;
+
+    // now clone it into the main module
+    llvm::CloneFunctionInto( DecodeFunc, NuDecodeFunc, VMap,
+			     llvm::CloneFunctionChangeType::GlobalChanges,
+			     Returns );
+
+    return M.getFunction("decode"); // return the reference in the module
   }
+  
 #endif // OBFS_XOR_EXTERN
 
   char* 
@@ -294,11 +328,10 @@ namespace
     {
       // Transform the strings
       auto GlobalStrings = encodeGlobalStrings(M);
-
-      // Inject functions
-      Function *DecodeFunc = createDecodeFunc(M);
-      Function *DecodeStub = createDecodeStubFunc(M, GlobalStrings, DecodeFunc);
       
+      Function* DecodeFunc = createDecodeFunc(M);
+      Function* DecodeStub = createDecodeStubFunc(M, GlobalStrings, DecodeFunc);
+
       // Inject a call to DecodeStub from main
       Function *MainFunc = M.getFunction("main");
       if (MainFunc)
@@ -315,7 +348,7 @@ getPassPluginInfo()
   const auto callback = [](PassBuilder &PB)
   {
     PB.registerPipelineEarlySimplificationEPCallback(
-        [&PB](ModulePassManager &MPM, OptimizationLevel Level)
+	[&PB](llvm::ModulePassManager &MPM, auto... other_args)
 	{
           MPM.addPass(StringObfuscatorModPass());
 	  outs() << "[INFO] Loaded StringObfuscation pass.\n";
@@ -330,7 +363,7 @@ getPassPluginInfo()
 };
 
 extern "C" LLVM_ATTRIBUTE_WEAK
-PassPluginLibraryInfo
+llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo()
 {
   return getPassPluginInfo();
