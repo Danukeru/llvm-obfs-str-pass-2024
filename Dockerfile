@@ -2,8 +2,8 @@
 FROM debian:12-slim AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG APP_ENV=
-ENV APP_ENV=${APP_ENV}
+ARG APP_ENV=UNSET
+ENV APP_LOSP_ENV=${APP_ENV}
 
 WORKDIR /build
 

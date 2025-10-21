@@ -10,4 +10,4 @@ Tested on llvm 18 through 20.
 - Default build uses a `decodeStub` that's implemented inline with llvm IRBuilder calls etc.
 - Pass `-D OBFS_XOR_EXTERN` is you want to build the module version that uses the external `decodeStub.bc` 
 - `clang-20 -O1 -emit-llvm decodeStub.c -c -o decodeStub.bc && llvm-dis-20 decodeStub.bc` command used to generate `decodeStub.bc` and `decodeStub.ll`  from `decodeStub.c`
-- `docker build -o . .` outputs a tarball
+- `docker build --build-arg APP_ENV=OBFS_XOR_EXTERN -o . .` outputs a tarball
